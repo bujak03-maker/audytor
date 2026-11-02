@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Kombajn Audytora 8.1 SECURE</title>
+    <title>Kombajn Audytora 8.2 SECURE</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script>tailwind.config = { darkMode: 'class' }</script>
     
@@ -54,7 +54,7 @@
     <div id="app-wrap" class="max-w-7xl mx-auto space-y-6 p-2 hidden">
         <div class="flex flex-col md:flex-row justify-between items-center bg-white dark:bg-slate-800 p-4 rounded-xl shadow-sm border-l-4 border-blue-600">
             <div>
-                <h1 class="text-2xl font-bold text-blue-600 dark:text-blue-400">Kombajn Audytora 8.1 <span class="text-xs bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded-full font-semibold ml-2">🛡️ SECURE CLOUD</span></h1>
+                <h1 class="text-2xl font-bold text-blue-600 dark:text-blue-400">Kombajn Audytora 8.2 <span class="text-xs bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded-full font-semibold ml-2">📅 GOOGLE CALENDAR</span></h1>
                 <p class="text-sm text-slate-500">Zarządzanie zleceniami, statystyki i numery świadectw</p>
             </div>
             <div class="flex gap-2 mt-4 md:mt-0 flex-wrap justify-center items-center">
@@ -400,7 +400,7 @@
             document.getElementById('c-res-gross').innerText = brutto.toFixed(2) + ' zł';
         }
 
-        // --- AUTORYZACIJA Z CZYSZCZENIEM PÓL ---
+        // --- AUTORYZACJA ---
         window.addEventListener('firebase-ready', () => {
             window.FB.onAuthStateChanged(window.FB.auth, (user) => {
                 if (user) {
@@ -410,7 +410,6 @@
                 } else {
                     document.getElementById('app-wrap').classList.add('hidden');
                     document.getElementById('login-screen').classList.remove('hidden');
-                    // Czyszczenie pól formularza logowania przy wylogowaniu
                     document.getElementById('login-form').reset();
                 }
             });
@@ -546,6 +545,24 @@
             window.scrollTo({ top: 0, behavior: 'smooth' });
         }
 
+        // --- FUNKCJA GENEROWANIA LINKU DO KALENDARZA GOOGLE ---
+        function addToGoogleCalendar(row) {
+            const title = encodeURIComponent(`Wizja: ${row.client} (${row.city})`);
+            const location = encodeURIComponent(`${row.city}, ${row.address || ''}`);
+            const details = encodeURIComponent(`Audyt / Świadectwo energetyczne\nTel: ${row.phone || 'Brak'}\nMail: ${row.email || 'Brak'}`);
+            
+            let dates = '';
+            if (row.date) {
+                const cleanDate = row.date.replace(/-/g, '');
+                const cleanTime = row.time ? row.time.replace(':', '') + '00' : '090000';
+                const endTime = row.time ? String(parseInt(row.time.substring(0,2)) + 1).padStart(2,'0') + row.time.substring(2) + '00' : '100000';
+                dates = `${cleanDate}T${cleanTime}/${cleanDate}T${endTime}`;
+            }
+
+            const gCalUrl = `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${title}&dates=${dates}&details=${details}&location=${location}`;
+            window.open(gCalUrl, '_blank');
+        }
+
         function resetForm() {
             document.getElementById('cert-form').reset(); 
             document.getElementById('edit-id').value = '';
@@ -583,6 +600,8 @@
                 const status = row.status || 'Zakończone'; const pStatus = row.payStatus || 'Opłacone'; const clientName = row.client || 'Brak imienia';
                 
                 if (status === 'Umówione') {
+                    // Tworzymy bezpieczny obiekt JSON do przekazania w funkcji kliknięcia
+                    const rowJson = JSON.stringify(row).replace(/"/g, '&quot;');
                     ribbon.innerHTML += `
                         <div class="min-w-[300px] bg-slate-50 dark:bg-slate-700/50 p-4 rounded-xl border-l-4 border-blue-500 shadow-sm flex-shrink-0">
                             <div class="text-blue-600 font-bold mb-1">${row.date} ${row.time ? '⏰ '+row.time : ''}</div>
@@ -592,6 +611,7 @@
                                 <a href="https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(row.city + ' ' + (row.address||''))}" target="_blank" class="bg-blue-100 text-blue-800 py-2 rounded-lg text-xs font-bold text-center">🗺️ Trasa</a>
                                 ${row.phone ? `<a href="tel:${row.phone}" class="bg-green-100 text-green-800 py-2 rounded-lg text-xs font-bold text-center">📞 Zadzwoń</a>` : ''}
                             </div>
+                            <button onclick='addToGoogleCalendar(${rowJson})' class="w-full mt-2 bg-indigo-100 text-indigo-800 dark:bg-indigo-900/50 dark:text-indigo-300 py-1.5 rounded-lg text-xs font-bold text-center border border-indigo-300 hover:bg-indigo-200">📅 Dodaj do Kalendarza Google</button>
                         </div>`;
                 }
 
@@ -744,7 +764,7 @@
             const citCont = document.getElementById('cities-revenue-container'); 
             citCont.innerHTML = '';
             Object.entries(cities).sort((a,b) => b[1].sum - a[1].sum).slice(0, 10).forEach(([k, v]) => {
-                const percent = brutto > 0 ? ((v.sum/brutto)*100).getText ? ((v.sum/brutto)*100).toFixed(1) : 0 : 0;
+                const percent = brutto > 0 ? ((v.sum/brutto)*100).toFixed(1) : 0;
                 citCont.innerHTML += `
                     <div class="flex justify-between items-center bg-slate-50 dark:bg-slate-700/30 p-2 rounded border border-slate-200 dark:border-slate-600">
                         <span class="font-bold text-slate-700 dark:text-slate-300">${k} <span class="text-xs text-slate-400 font-normal ml-1">(${v.count} szt.)</span></span>
